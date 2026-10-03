@@ -36,45 +36,36 @@ Para subir toda a infraestrutura e a aplicação para o Azure, siga os passos ab
 No seu computador, abra o projeto e gere o build da aplicação:
 ```bash
 mvn clean package -DskipTests
-
-
 (Isto irá gerar o ficheiro nexus-verde-3.2.5.jar dentro da pasta target).
 
 2. Executar o Script de Infraestrutura e Deploy (Azure CLI)
-Certifique-se de que está logado no Azure (az login) e execute o seguinte script no PowerShell para criar os recursos (Grupo de Recursos, Servidor SQL, Base de Dados, App Service Plan, Web App, Application Insights e Injeção de Variáveis):
+Certifique-se de que está logado no Azure (az login) e execute o seguinte script no PowerShell para criar os recursos:
 
+PowerShell
+$RG = "rg-dimdim-carlos"
+$LOC = "canadacentral"
+$SQL = "sqlserver-dimdim-566022"
+$DB = "nexus_verde_db"
+$USER = "carlosadmin"
+$PASS = "Fiap#2026"
+$PLAN = "plan-dimdim-566022"
+$APP = "webapp-dimdim-566022"
 
-$RG_NAME = "rg-dimdim-carlos"
-$LOCATION = "canadacentral"
-$SQL_SERVER_NAME = "sqlserver-dimdim-566022"
-$SQL_DB_NAME = "nexus_verde_db"
-$SQL_ADMIN = "carlosadmin"
-$SQL_PASSWORD = "Fiap#2026"
-$APP_PLAN_NAME = "plan-dimdim-566022"
-$WEBAPP_NAME = "webapp-dimdim-566022"
+az group create --name $RG --location $LOC
+az sql server create --name $SQL -g $RG -l $LOC --admin-user $USER --admin-password $PASS
+az sql server firewall-rule create -g $RG --server $SQL --name AllowAll --start-ip-address 0.0.0.0 --end-ip-address 255.255.255.255
+az sql db create -g $RG --server $SQL --name $DB --service-objective Basic
 
-# Criar Grupo de Recursos e Banco de Dados PaaS
-az group create --name $RG_NAME --location $LOCATION
-az sql server create --name $SQL_SERVER_NAME --resource-group $RG_NAME --location $LOCATION --admin-user $SQL_ADMIN --admin-password $SQL_PASSWORD
-az sql server firewall-rule create --resource-group $RG_NAME --server $SQL_SERVER_NAME --name AllowAzureServices --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0
-az sql server firewall-rule create --resource-group $RG_NAME --server $SQL_SERVER_NAME --name AllowAll --start-ip-address 0.0.0.0 --end-ip-address 255.255.255.255
-az sql db create --resource-group $RG_NAME --server $SQL_SERVER_NAME --name $SQL_DB_NAME --service-objective Basic
-
-# Configurar Application Insights
 az extension add -n application-insights
-az monitor app-insights component create --app "appinsights-$WEBAPP_NAME" --location $LOCATION --kind web -g $RG_NAME --application-type web
-$APP_INSIGHTS_KEY = az monitor app-insights component show --app "appinsights-$WEBAPP_NAME" -g $RG_NAME --query instrumentationKey -o tsv
+az monitor app-insights component create --app "appinsights-$APP" -l $LOC --kind web -g $RG --application-type web
+$KEY = az monitor app-insights component show --app "appinsights-$APP" -g $RG --query instrumentationKey -o tsv
 
-# Criar Web App (Linux + Java 17)
-az appservice plan create --name $APP_PLAN_NAME --resource-group $RG_NAME --sku B1 --is-linux
-az webapp create --resource-group $RG_NAME --plan $APP_PLAN_NAME --name $WEBAPP_NAME --runtime "JAVA|17-java17"
+az appservice plan create --name $PLAN -g $RG --sku B1 --is-linux
+az webapp create -g $RG --plan $PLAN --name $APP --runtime "JAVA|17-java17"
 
-# Injetar Variaveis de Ambiente e Ligação ao Banco
-az webapp config appsettings set --resource-group $RG_NAME --name $WEBAPP_NAME --settings SPRING_DATASOURCE_URL="jdbc:sqlserver://$($SQL_SERVER_NAME).database.windows.net:1433;database=$SQL_DB_NAME;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;" SPRING_DATASOURCE_USERNAME=$SQL_ADMIN SPRING_DATASOURCE_PASSWORD=$SQL_PASSWORD APPINSIGHTS_INSTRUMENTATIONKEY=$APP_INSIGHTS_KEY APPLICATIONINSIGHTS_CONNECTION_STRING="InstrumentationKey=$APP_INSIGHTS_KEY"
+az webapp config appsettings set -g $RG --name $APP --settings SPRING_DATASOURCE_URL="jdbc:sqlserver://$($SQL).database.windows.net:1433;database=$DB;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;" SPRING_DATASOURCE_USERNAME=$USER SPRING_DATASOURCE_PASSWORD=$PASS APPINSIGHTS_INSTRUMENTATIONKEY=$KEY APPLICATIONINSIGHTS_CONNECTION_STRING="InstrumentationKey=$KEY"
 
-# Realizar o Deploy do JAR
-az webapp deploy --resource-group $RG_NAME --name $WEBAPP_NAME --src-path target/nexus-verde-3.2.5.jar --type jar
-
+az webapp deploy -g $RG --name $APP --src-path target/nexus-verde-3.2.5.jar --type jar
 💾 Inicialização da Base de Dados (DML / DDL)
 O script completo de criação das tabelas e carga inicial encontra-se no ficheiro init.sql na raiz deste repositório.
 Para aplicá-lo:
@@ -87,8 +78,9 @@ Abra o Editor de consultas (Query editor), faça login com carlosadmin e Fiap#20
 
 Cole e execute o conteúdo do ficheiro init.sql.
 
-👨‍💻 Aluno
-Nome: Carlos Alberto Guedes Neto, Eduardo Novaes, Mathaus Victor, Luan Peixoto, Vinícius L. E. M. Garcia
+👨‍💻 Alunos
+Integrantes: Carlos Alberto Guedes Neto, Eduardo Novaes, Mathaus Victor, Luan Peixoto, Vinícius L. E. M. Garcia
 
-RM: 566022, 561515, 564146, 562258, 563340
+RMs: 566022, 561515, 564146, 562258, 563340
 
+Instituição: FIAP
