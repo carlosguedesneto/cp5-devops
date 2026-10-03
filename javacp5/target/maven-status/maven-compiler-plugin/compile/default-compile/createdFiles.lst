@@ -1,0 +1,9 @@
+com\example\nexusverde\entity\Profissao.class
+com\example\nexusverde\repository\ProfissaoRepository.class
+com\example\nexusverde\service\PessoaService.class
+com\example\nexusverde\controller\PessoaController.class
+com\example\nexusverde\controller\ProfissaoController.class
+com\example\nexusverde\repository\PessoaRepository.class
+com\example\nexusverde\NexusVerdeApplication.class
+com\example\nexusverde\service\ProfissaoService.class
+com\example\nexusverde\entity\Pessoa.class
